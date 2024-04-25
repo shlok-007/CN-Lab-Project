@@ -2,7 +2,7 @@ import random
 import numpy as np 
 import matplotlib.pyplot as plt
 
-#upload bandwidth greedily divided based on upload speed of peers and reciprocation is allowed
+#upload bandwidth divided greedily of peers and reciprocation is allowed
 
 file_len = 50
 num_peers = 100
@@ -64,9 +64,11 @@ class TorrentNetwork:
 
             eligible_peers.sort(key=lambda x: (x.upload_rate, -len(x.pieces)), reverse=True)
             top_peers = eligible_peers[:3]  # Select top 3 peers based on priority
-            # if current_step % 3 == 0 and eligible_peers:
-            #     optimistic_peer = random.choice(eligible_peers)
-            #     top_peers.append(optimistic_peer)
+            if current_step % 5 == 0:
+                non_top_peers = [p for p in self.peers if p not in top_peers and not p.is_seeder]
+                if non_top_peers:
+                    optimistic_peer = random.choice(non_top_peers)
+                    top_peers.append(optimistic_peer)
 
             unchoking_decisions[peer] = top_peers
             for chosen_peer in top_peers:
