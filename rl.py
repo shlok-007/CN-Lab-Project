@@ -1,8 +1,9 @@
+#using reinforcement learning to decide on peers to unchoke
+
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 
-#using Reinforcemnt learning to select peers to unchoke
 
 file_len = 50
 num_peers=100

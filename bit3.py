@@ -1,8 +1,9 @@
+#upload bandwidth greedily divided based on number of pieces received by the peers and reciprocation is compulsory
+
 import random
 import numpy as np 
 import matplotlib.pyplot as plt
 
-#upload bandwidth greedily divided based on number of pieces received by the peers and reciprocation allowed
 
 file_len = 50
 num_peers = 100
