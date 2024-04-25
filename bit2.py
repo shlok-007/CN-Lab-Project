@@ -15,7 +15,7 @@ class Peer:
         self.upload_rate_mean = int(np.random.uniform(100.0, 800.0))
         self.upload_rate = self.upload_rate_mean  # Simulated capability
         self.upload_bandwidth = self.upload_rate // 100  # Max pieces per step
-        self.max_download_bandwidth = 8  # Max pieces to download per step
+        self.max_download_bandwidth = 8 # Max pieces to download per step
         if is_seeder:
             self.pieces = set(range(file_len))  # Seeder starts with all pieces
         self.download_count_last_step = 0
@@ -60,13 +60,15 @@ class TorrentNetwork:
             if peer.is_seeder:
                 eligible_peers = [p for p in self.peers if p.id != peer.id and not p.is_seeder and len(p.pieces) < file_len]
             else:
-                eligible_peers = [p for p in self.peers if p.id != peer.id and not p.is_seeder and list((p.pieces) -(peer.pieces))]
+                eligible_peers = [p for p in self.peers if p.id != peer.id and not p.is_seeder and len(list((p.pieces) -(peer.pieces)))]
 
             eligible_peers.sort(key=lambda x: (x.upload_rate, -len(x.pieces)), reverse=True)
             top_peers = eligible_peers[:3]  # Select top 3 peers based on priority
-            if current_step % 3 == 0 and eligible_peers:
-                optimistic_peer = random.choice(eligible_peers)
-                top_peers.append(optimistic_peer)
+            # if current_step % 3 == 0:
+            #     non_top_peers = [p for p in self.peers if p not in top_peers and not p.is_seeder]
+            #     if non_top_peers:
+            #         optimistic_peer = random.choice(non_top_peers)
+            #         top_peers.append(optimistic_peer)
 
             unchoking_decisions[peer] = top_peers
             for chosen_peer in top_peers:
@@ -97,27 +99,28 @@ class TorrentNetwork:
                         self.piece_freq[piece]+=1
                         chosen_peer.pieces.add(piece)
                         chosen_peer.download_count_last_step += 1
-                        chosen_peer.downloaded_pieces += 1
+                        chosen_peer.downloaded_pieces+=1
                         peer.upload_count_last_step += 1
-                        peer.uploaded_pieces += 1
+                        peer.uploaded_pieces+=1
                         available_pieces.remove(piece)
                         if len(chosen_peer.pieces) == file_len and not chosen_peer.is_seeder:
                             chosen_peer.is_seeder = True
                             chosen_peer.completed_step = current_step
-        max_bw-=pieces_transferred
-        if max_bw:
+        if peer.upload_count_last_step < peer.upload_bandwidth:
             for chosen_peer in top_peers:
                 if peer.upload_count_last_step < peer.upload_bandwidth:
                     available_pieces = list(peer.pieces - chosen_peer.pieces)
+                    available_pieces.sort(key=lambda x: self.piece_freq[x])
                     pieces_to_transfer = min(len(available_pieces), chosen_peer.max_download_bandwidth - chosen_peer.download_count_last_step,peer.upload_bandwidth-peer.upload_count_last_step)
                     for _ in range(pieces_to_transfer):
                         if peer.upload_count_last_step < peer.upload_bandwidth:  # Check if peer can still upload
-                            piece = random.choice(available_pieces)
+                            piece = available_pieces[0]
+                            self.piece_freq[piece]+=1
                             chosen_peer.pieces.add(piece)
                             chosen_peer.download_count_last_step += 1
-                            chosen_peer.downloaded_pieces += 1
+                            chosen_peer.downloaded_pieces+=1
                             peer.upload_count_last_step += 1
-                            peer.uploaded_pieces += 1
+                            peer.uploaded_pieces+=1
                             available_pieces.remove(piece)
                             if len(chosen_peer.pieces) == file_len and not chosen_peer.is_seeder:
                                 chosen_peer.is_seeder = True
@@ -173,7 +176,7 @@ class TorrentNetwork:
             print(f"Average completion step for upload rate of 600-700 {u_600_700/n_600_700}")
         if n_700_800:
             print(f"Average completion step for upload rate of 700-800 {u_700_800/n_700_800}")
-
+        
     def plot_graph(self):
         completion_steps = {}
         upload_speed_ranges = [(100, 200), (200, 300), (300, 400), (400, 500), (500, 600), (600, 700), (700, 800)]
@@ -221,13 +224,14 @@ class TorrentNetwork:
         steps = 0
         while not self.all_have_files():
             self.perform_choke_unchoke(steps)
+            random.shuffle(self.peers)
             # print(f"Step {steps}:")
             # for peer in self.peers:
             #     print(peer)
-            #     peer.adjust_upload_rate()
+                # peer.adjust_upload_rate()
             steps += 1
-            if steps > 200:  
-                print("Stopping simulation after 200 steps")
+            if steps > 2000:  
+                print("Stopping simulation after 2000 steps")
                 break
         self.print_summary()
         self.print_statistics()
