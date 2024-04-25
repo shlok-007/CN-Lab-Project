@@ -15,7 +15,7 @@ class Peer:
         self.upload_rate_mean = int(np.random.uniform(100.0, 800.0))
         self.upload_rate = self.upload_rate_mean  # Simulated capability
         self.upload_bandwidth = self.upload_rate // 100  # Max pieces per step
-        self.max_download_bandwidth = 8  # Max pieces to download per step
+        self.max_download_bandwidth = 8 # Max pieces to download per step
         if is_seeder:
             self.pieces = set(range(file_len))  # Seeder starts with all pieces
         self.download_count_last_step = 0
@@ -64,9 +64,11 @@ class TorrentNetwork:
 
             eligible_peers.sort(key=lambda x: (x.upload_rate, -len(x.pieces)), reverse=True)
             top_peers = eligible_peers[:3]  # Select top 3 peers based on priority
-            if current_step % 3 == 0 and eligible_peers:
-                optimistic_peer = random.choice(eligible_peers)
-                top_peers.append(optimistic_peer)
+            if current_step % 3 == 0:
+                non_top_peers = [p for p in self.peers if p not in top_peers and not p.is_seeder]
+                if non_top_peers:
+                    optimistic_peer = random.choice(non_top_peers)
+                    top_peers.append(optimistic_peer)
 
             unchoking_decisions[peer] = top_peers
             for chosen_peer in top_peers:
@@ -106,15 +108,16 @@ class TorrentNetwork:
                         if len(chosen_peer.pieces) == file_len and not chosen_peer.is_seeder:
                             chosen_peer.is_seeder = True
                             chosen_peer.completed_step = current_step
-        max_bw-=pieces_transferred
-        if max_bw:
+        if peer.upload_count_last_step < peer.upload_bandwidth:
             for chosen_peer in top_peers:
                 if peer.upload_count_last_step < peer.upload_bandwidth:
                     available_pieces = list(peer.pieces - chosen_peer.pieces)
+                    available_pieces.sort(key=lambda x: self.piece_freq[x])
                     pieces_to_transfer = min(len(available_pieces), chosen_peer.max_download_bandwidth - chosen_peer.download_count_last_step,peer.upload_bandwidth-peer.upload_count_last_step)
                     for _ in range(pieces_to_transfer):
                         if peer.upload_count_last_step < peer.upload_bandwidth:  # Check if peer can still upload
-                            piece = random.choice(available_pieces)
+                            piece = available_pieces[0]
+                            self.piece_freq[piece]+=1
                             chosen_peer.pieces.add(piece)
                             chosen_peer.download_count_last_step += 1
                             chosen_peer.downloaded_pieces+=1
@@ -223,13 +226,14 @@ class TorrentNetwork:
         steps = 0
         while not self.all_have_files():
             self.perform_choke_unchoke(steps)
+            random.shuffle(self.peers)
             # print(f"Step {steps}:")
             # for peer in self.peers:
             #     print(peer)
                 # peer.adjust_upload_rate()
             steps += 1
-            if steps > 200:  
-                print("Stopping simulation after 200 steps")
+            if steps > 2000:  
+                print("Stopping simulation after 2000 steps")
                 break
         self.print_summary()
         self.print_statistics()
