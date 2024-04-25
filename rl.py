@@ -51,9 +51,9 @@ class TorrentNetwork:
         # self.w_uploaded = random.normalvariate(0, 1) #for training
         # self.w_downloaded = random.normalvariate(0, 1) #for training
         # self.w_uploadrate = random.normalvariate(0, 1) #for training
-        self.w_uploaded = 7712.9770312808264 #achieved after training
-        self.w_downloaded = 6607.8036186552288   #achieved after training
-        self.w_uploadrate = 605.31706549339032 #achieved after training
+        self.w_uploaded = 5549.9770312808264 #achieved after training
+        self.w_downloaded = 2221.8036186552288   #achieved after training
+        self.w_uploadrate = 364.31706549339032 #achieved after training
         self.loss = 0 #for training
 
     def all_have_files(self):
@@ -93,7 +93,7 @@ class TorrentNetwork:
 
     def share_pieces(self, peer, top_peers,current_step):
         n_chosen = len(top_peers)
-        top_peers.sort(key=lambda x: ((x.upload_rate*self.w_uploadrate/100.0) + x.uploaded_pieces*self.w_uploaded +x.downloaded_pieces*self.w_downloaded), reverse=True)
+        top_peers.sort(key=lambda x: ((x.upload_rate*self.w_uploadrate/100.0) + x.uploaded_pieces*self.w_uploaded -x.downloaded_pieces*self.w_downloaded), reverse=True)
         if n_chosen>peer.upload_bandwidth:
             while len(top_peers)!=peer.upload_bandwidth:
                 top_peers= top_peers[:-1]
@@ -137,20 +137,15 @@ class TorrentNetwork:
                             if len(chosen_peer.pieces) == file_len and not chosen_peer.is_seeder:
                                 chosen_peer.is_seeder = True
                                 chosen_peer.completed_step = current_step
-        self.calc_loss(current_step) #for training
+        # self.calc_loss(current_step) #for training
         
     def calc_loss(self, step):   
         self.loss = 0 
         for peer in self.peers:
             # Calculate the contribution of each peer to the loss function
-            peer_contribution = (peer.upload_rate * self.w_uploadrate / 100.0) + (peer.uploaded_pieces * self.w_uploaded) + (peer.downloaded_pieces * self.w_downloaded)
-            
-            # Incentivize users who have uploaded data into the network
-            upload_incentive = peer.uploaded_pieces * self.w_uploaded
-            download_incentive = peer.downloaded_pieces * self.w_downloaded
-            
+            peer_contribution = (peer.upload_rate * self.w_uploadrate / 100.0) + (peer.uploaded_pieces * self.w_uploaded) - (peer.downloaded_pieces * self.w_downloaded)
             # Add the total contribution of the peer to the loss function
-            self.loss -= peer.upload_count_last_step * (peer_contribution + upload_incentive + download_incentive)
+            self.loss -= peer.upload_count_last_step * (peer_contribution )
         
         # Perform backpropagation with a specified learning rate
         self.backpropagate(0.01)
