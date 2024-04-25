@@ -51,9 +51,9 @@ class TorrentNetwork:
         # self.w_uploaded = random.normalvariate(0, 1) #for training
         # self.w_downloaded = random.normalvariate(0, 1) #for training
         # self.w_uploadrate = random.normalvariate(0, 1) #for training
-        self.w_uploaded = 486.79589109916964 #achieved after training
-        self.w_downloaded = 96.24374479005202 #achieved after training
-        self.w_uploadrate = 22.573205749672294 #achieved after training
+        self.w_uploaded = 1443.266662907426 #achieved after training
+        self.w_downloaded = 183.1492696872364 #achieved after training
+        self.w_uploadrate = 26.579677152649403 #achieved after training
         self.loss = 0 #for training
 
     def all_have_files(self):
@@ -75,9 +75,9 @@ class TorrentNetwork:
 
             eligible_peers.sort(key=lambda x: ((x.upload_rate*self.w_uploadrate/100.0) + x.uploaded_pieces*self.w_uploaded +x.downloaded_pieces*self.w_downloaded), reverse=True)
             top_peers = eligible_peers[:3]  # Select top 3 peers based on priority
-            if current_step % 3 == 0 and eligible_peers:
-                optimistic_peer = random.choice(eligible_peers)
-                top_peers.append(optimistic_peer)
+            # if current_step % 3 == 0 and eligible_peers:
+            #     optimistic_peer = random.choice(eligible_peers)
+            #     top_peers.append(optimistic_peer)
 
             unchoking_decisions[peer] = top_peers
             for chosen_peer in top_peers:
@@ -118,7 +118,7 @@ class TorrentNetwork:
                             chosen_peer.is_seeder = True
                             chosen_peer.completed_step = current_step
         max_bw-=pieces_transferred
-        if max_bw:
+        if peer.upload_count_last_step < peer.upload_bandwidth:
             for chosen_peer in top_peers:
                 if peer.upload_count_last_step < peer.upload_bandwidth:
                     available_pieces = list(peer.pieces - chosen_peer.pieces)
