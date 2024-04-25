@@ -51,9 +51,9 @@ class TorrentNetwork:
         # self.w_uploaded = random.normalvariate(0, 1) #for training
         # self.w_downloaded = random.normalvariate(0, 1) #for training
         # self.w_uploadrate = random.normalvariate(0, 1) #for training
-        self.w_uploaded = 1443.266662907426 #achieved after training
-        self.w_downloaded = 183.1492696872364 #achieved after training
-        self.w_uploadrate = 26.579677152649403 #achieved after training
+        self.w_uploaded = 7712.9770312808264 #achieved after training
+        self.w_downloaded = 6607.8036186552288   #achieved after training
+        self.w_uploadrate = 605.31706549339032 #achieved after training
         self.loss = 0 #for training
 
     def all_have_files(self):
@@ -75,9 +75,11 @@ class TorrentNetwork:
 
             eligible_peers.sort(key=lambda x: ((x.upload_rate*self.w_uploadrate/100.0) + x.uploaded_pieces*self.w_uploaded +x.downloaded_pieces*self.w_downloaded), reverse=True)
             top_peers = eligible_peers[:3]  # Select top 3 peers based on priority
-            # if current_step % 3 == 0 and eligible_peers:
-            #     optimistic_peer = random.choice(eligible_peers)
-            #     top_peers.append(optimistic_peer)
+            if current_step % 5 == 0:
+                non_top_peers = [p for p in self.peers if p not in top_peers and not p.is_seeder]
+                if non_top_peers:
+                    optimistic_peer = random.choice(non_top_peers)
+                    top_peers.append(optimistic_peer)
 
             unchoking_decisions[peer] = top_peers
             for chosen_peer in top_peers:
@@ -135,7 +137,7 @@ class TorrentNetwork:
                             if len(chosen_peer.pieces) == file_len and not chosen_peer.is_seeder:
                                 chosen_peer.is_seeder = True
                                 chosen_peer.completed_step = current_step
-        # self.calc_loss(current_step) #for training
+        self.calc_loss(current_step) #for training
         
     def calc_loss(self, step):   
         self.loss = 0 
@@ -151,7 +153,7 @@ class TorrentNetwork:
             self.loss -= peer.upload_count_last_step * (peer_contribution + upload_incentive + download_incentive)
         
         # Perform backpropagation with a specified learning rate
-        self.backpropagate(0.001)
+        self.backpropagate(0.01)
         
         # Print the calculated loss
         print(self.loss)
@@ -166,13 +168,13 @@ class TorrentNetwork:
             # Calculate gradients for each weight
             dw_uploadrate += -peer.upload_count_last_step * (peer.upload_rate / 100.0)
             dw_uploaded += -peer.upload_count_last_step * peer.uploaded_pieces
-            dw_downloaded += -peer.upload_count_last_step * peer.downloaded_pieces
+            dw_downloaded -= -peer.upload_count_last_step * peer.downloaded_pieces
             
             
         # Update weights
         self.w_uploadrate -= learning_rate * dw_uploadrate/num_peers
         self.w_uploaded -= learning_rate * dw_uploaded/num_peers
-        self.w_downloaded -= learning_rate * dw_downloaded/num_peers
+        self.w_downloaded += learning_rate * dw_downloaded/num_peers
 
 
     def print_summary(self):
